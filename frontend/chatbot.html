@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>FinQuery Chat</title>
+  <link crossorigin href="https://fonts.gstatic.com/" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #111922;
+      color: #e0e0e0;
+    }
+    .input-glow:focus-within {
+      box-shadow: 0 0 0 2px #1978e5;
+    }
+    .placeholder-fade::-webkit-input-placeholder {
+      transition: opacity 0.3s ease-in-out;
+    }
+    .placeholder-fade:focus::-webkit-input-placeholder {
+      opacity: 0.5;
+    }
+    .prompt-carousel {
+      display: flex;
+      overflow: hidden;
+      position: relative;
+      height: 24px;
+    }
+    .prompt-item {
+      white-space: nowrap;
+      position: absolute;
+      animation: carousel-animation 10s infinite linear;
+      opacity: 0;
+    }
+    .prompt-item:nth-child(1) {
+      animation-delay: 0s;
+    }
+    .prompt-item:nth-child(2) {
+      animation-delay: 5s;
+    }
+    @keyframes carousel-animation {
+      0% {
+        opacity: 0;
+        transform: translateY(100%);
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      40% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      50% {
+        opacity: 0;
+        transform: translateY(-100%);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-100%);
+      }
+    }
+    .footer-icon {
+      transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+    }
+    .footer-icon:hover {
+      color: #e0e0e0;
+      transform: scale(1.1);
+    }
+    #chat-messages {
+      max-height: 500px;
+      overflow-y: auto;
+      background: #1a2532;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .message {
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      max-width: 85%;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .user-message {
+      background-color: #1978e5;
+      color: white;
+      align-self: flex-end;
+    }
+    .bot-message {
+      background-color: #243447;
+      color: #e0e0e0;
+      align-self: flex-start;
+    }
+    .suggestion-item {
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 0.5rem;
+      background-color: #2d374850;
+      transition: background-color 0.2s;
+      cursor: pointer;
+      border-left: 3px solid #1978e5;
+    }
+    .suggestion-item:hover {
+      background-color: #2d3748;
+    }
+    .suggestion-title {
+      font-weight: 600;
+      color: #1978e5;
+      margin-bottom: 0.25rem;
+    }
+    .suggestion-excerpt {
+      font-size: 0.85rem;
+      color: #a0aec0;
+      margin-top: 0.25rem;
+    }
+    .document-reference {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+    #search-results {
+      position: absolute;
+      width: calc(100% - 2rem);
+      max-height: 300px;
+      overflow-y: auto;
+      background: #1a2532;
+      border-radius: 0.5rem;
+      margin-top: 0.5rem;
+      z-index: 10;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+    .upload-success {
+      color: #10b981;
+    }
+    .upload-error {
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen selection:bg-[#1978e5] selection:text-white">
+  <nav class="bg-[#1a2532] text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <div class="flex-shrink-0 text-lg font-semibold tracking-wide text-[#1978e5]">
+          FinQueryChat
+        </div>
+        <div class="flex space-x-6 text-sm font-medium">
+          <a href="app.html" class="hover:text-[#1978e5] transition-colors">Home</a>
+          <a href="findocanalyser.html" class="hover:text-[#1978e5] transition-colors">Doc Analyser</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-grow flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto w-full">
+  <!-- Sidebar: Uploader and Search -->
+  <div class="w-full lg:w-1/3 flex flex-col gap-6">
+    <!-- Document Uploader -->
+    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+      <h2 class="text-xl font-semibold text-white mb-4 text-center">
+        Upload Financial Documents
+      </h2>
+      <form id="upload-form" class="flex flex-col items-center gap-4" enctype="multipart/form-data">
+        <label class="w-full cursor-pointer">
+          <input type="file" id="document-files" name="documents" multiple class="hidden" onchange="updateFileLabel(this)" />
+          <div class="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            Choose Files
+          </div>
+          <p id="file-label" class="mt-2 text-sm text-gray-400 text-center">No file chosen</p>
+        </label>
+        <button type="submit" id="upload-btn" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">
+          Upload Documents
+        </button>
+        <div id="upload-spinner" class="hidden text-white text-sm flex items-center gap-2">
+          <svg class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none"></circle>
+            <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          Uploading...
+        </div>
+        <ul id="uploaded-file-list" class="text-sm text-gray-300 mt-4 list-disc pl-5 text-left w-full"></ul>
+      </form>
+    </div>
+
+    <!-- Search input -->
+    <div class="relative">
+      <input
+        id="search-bar"
+        class="w-full bg-[#1a2532] text-white placeholder-[#708090] text-sm rounded-lg py-3.5 px-5 focus:ring-2 focus:ring-[#1978e5] focus:outline-none border border-[#243447]"
+        placeholder="Search by company, quarter, or keyword..."
+        type="search"
+        autocomplete="off"
+      />
+      <span
+        class="material-icons-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#708090] cursor-pointer"
+        onclick="triggerSearch()"
+      >search</span>
+      <div id="search-results"></div>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="w-full lg:w-2/3 flex flex-col">
+    <!-- Chat messages container -->
+    <div id="chat-messages" class="flex-grow h-[550px] overflow-y-auto bg-[#1a2532] rounded-2xl p-6 mb-6 shadow-lg" aria-live="polite" aria-relevant="additions"></div>
+
+    <!-- Input area -->
+    <div class="bg-[#1a2532] rounded-xl shadow-xl p-6">
+      <div class="relative mb-3">
+        <textarea
+          id="user-input"
+          class="w-full bg-[#111922] text-white placeholder-[#708090] text-sm rounded-lg p-4 pr-12 focus:ring-2 focus:ring-[#1978e5] focus:outline-none border border-[#243447] resize-none placeholder-fade"
+          placeholder="Type your message..."
+          rows="5"
+          aria-label="Message input"
+        ></textarea>
+        <button
+          id="send-btn"
+          class="absolute right-3 bottom-3 text-[#708090] hover:text-[#1978e5] transition-colors"
+          type="button"
+          aria-label="Send message"
+        >
+          <span class="material-icons-outlined">send</span>
+        </button>
+      </div>
+      <div class="text-xs text-center text-[#708090] h-6 prompt-carousel" aria-hidden="true">
+        <span class="prompt-item">e.g., What did the CFO say about Q2 results?</span>
+        <span class="prompt-item">e.g., Summarize Tesla's earnings call.</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+  <footer class="w-full py-4">
+    <div class="max-w-4xl mx-auto text-center">
+      <p class="text-sm text-[#94a3b8] mb-2">
+        Built with ❤️ by Deepayan Basu | BTech @ IIT Jodhpur
+      </p>
+      <div class="flex justify-center space-x-4">
+        <a
+          aria-label="Email"
+          class="text-[#94a3b8] footer-icon"
+          href="mailto:deepayanbasu5@gmail.com"
+          target="_blank"
+          ><i class="fas fa-envelope fa-lg"></i
+        ></a>
+        <a
+          aria-label="LinkedIn"
+          class="text-[#94a3b8] footer-icon"
+          href="https://www.linkedin.com/in/deepayan-basu-06a5b123b/"
+          target="_blank"
+          ><i class="fab fa-linkedin-in fa-lg"></i
+        ></a>
+        <a
+          aria-label="GitHub"
+          class="text-[#94a3b8] footer-icon"
+          href="https://github.com/Deepayanbasu07"
+          target="_blank"
+          ><i class="fab fa-github fa-lg"></i
+        ></a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const chatMessages = document.getElementById('chat-messages');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const searchBar = document.getElementById('search-bar');
+    const searchResults = document.getElementById('search-results');
+
+    // Append message to chat
+    function appendMessage(text, sender) {
+      const msg = document.createElement('div');
+      msg.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
+      
+      const msgText = document.createElement('div');
+      msgText.innerHTML = text.replace(/\n/g, '<br>');
+      msg.appendChild(msgText);
+      
+      const timestamp = document.createElement('div');
+      timestamp.style.fontSize = '0.7rem';
+      timestamp.style.opacity = '0.6';
+      timestamp.style.marginTop = '0.2rem';
+      timestamp.style.textAlign = sender === 'user' ? 'right' : 'left';
+      timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      msg.appendChild(timestamp);
+
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+    }
+
+    // Show typing indicator
+    function showTypingIndicator() {
+      const typingMsg = document.createElement('div');
+      typingMsg.classList.add('message', 'bot-message');
+      typingMsg.id = 'typing-indicator';
+      typingMsg.textContent = 'Typing...';
+      chatMessages.appendChild(typingMsg);
+      chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+    }
+
+    // Remove typing indicator
+    function removeTypingIndicator() {
+      const typingMsg = document.getElementById('typing-indicator');
+      if (typingMsg) {
+        chatMessages.removeChild(typingMsg);
+      }
+    }
+
+    // Perform search with suggestions
+    async function performSearch(query) {
+      appendMessage(`🔍 Searching: "${query}"`, 'user');
+      showTypingIndicator();
+
+      try {
+        const response = await fetch('/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+
+        removeTypingIndicator();
+        const data = await response.json();
+
+        if (!response.ok) {
+          appendMessage(`Error: ${data.response || 'Server error'}`, 'bot');
+          return;
+        }
+
+        // Display main response
+        appendMessage(data.response, 'bot');
+
+        // Display suggestions if available
+        if (data.suggestions && data.suggestions.length > 0) {
+          const suggestionsMsg = document.createElement('div');
+          suggestionsMsg.classList.add('message', 'bot-message');
+          
+          const suggestionsTitle = document.createElement('div');
+          suggestionsTitle.textContent = '📄 Relevant Documents:';
+          suggestionsTitle.style.fontWeight = 'bold';
+          suggestionsTitle.style.marginBottom = '8px';
+          suggestionsMsg.appendChild(suggestionsTitle);
+
+          const suggestionsList = document.createElement('div');
+          suggestionsList.style.display = 'flex';
+          suggestionsList.style.flexDirection = 'column';
+          suggestionsList.style.gap = '8px';
+
+          data.suggestions.forEach(suggestion => {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.classList.add('suggestion-item');
+            
+            const docTitle = document.createElement('div');
+            docTitle.classList.add('suggestion-title');
+            docTitle.textContent = `${suggestion.document} (Page ${suggestion.page})`;
+            
+            const excerpt = document.createElement('div');
+            excerpt.classList.add('suggestion-excerpt');
+            excerpt.textContent = suggestion.excerpt;
+            
+            suggestionItem.appendChild(docTitle);
+            suggestionItem.appendChild(excerpt);
+            
+            suggestionItem.onclick = () => {
+              appendMessage(`Show me content from ${suggestion.document}, page ${suggestion.page}`, 'user');
+              searchBar.value = `${suggestion.document} page ${suggestion.page}`;
+              searchResults.style.display = 'none';
+            };
+            
+            suggestionsList.appendChild(suggestionItem);
+          });
+
+          suggestionsMsg.appendChild(suggestionsList);
+          chatMessages.appendChild(suggestionsMsg);
+          chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+        }
+      } catch (error) {
+        removeTypingIndicator();
+        appendMessage('Error: Could not perform search.', 'bot');
+        console.error(error);
+      }
+    }
+
+    // Search bar functionality
+    let searchTimeout;
+    searchBar.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const query = searchBar.value.trim();
+      
+      if (query.length > 2) {
+        searchTimeout = setTimeout(() => {
+          fetchSearchSuggestions(query);
+        }, 300);
+      } else {
+        searchResults.style.display = 'none';
+      }
+    });
+
+    searchBar.addEventListener('focus', () => {
+      if (searchBar.value.trim().length > 2) {
+        fetchSearchSuggestions(searchBar.value.trim());
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!searchBar.contains(e.target)) {
+        searchResults.style.display = 'none';
+      }
+    });
+
+    async function fetchSearchSuggestions(query) {
+      try {
+        const response = await fetch('/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.suggestions && data.suggestions.length > 0) {
+          searchResults.innerHTML = '';
+          searchResults.style.display = 'block';
+          
+          data.suggestions.forEach(suggestion => {
+            const item = document.createElement('div');
+            item.classList.add('suggestion-item');
+            item.style.cursor = 'pointer';
+            item.style.padding = '0.75rem';
+            
+            const title = document.createElement('div');
+            title.textContent = `${suggestion.document} (Page ${suggestion.page})`;
+            title.style.fontWeight = '500';
+            
+            const excerpt = document.createElement('div');
+            excerpt.textContent = suggestion.excerpt;
+            excerpt.style.fontSize = '0.85rem';
+            excerpt.style.color = '#a0aec0';
+            excerpt.style.marginTop = '0.25rem';
+            
+            item.appendChild(title);
+            item.appendChild(excerpt);
+            
+            item.onclick = () => {
+              searchBar.value = `${suggestion.document} page ${suggestion.page}`;
+              searchResults.style.display = 'none';
+              triggerSearch();
+            };
+            
+            searchResults.appendChild(item);
+          });
+        } else {
+          searchResults.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        searchResults.style.display = 'none';
+      }
+    }
+
+    function triggerSearch() {
+      const query = searchBar.value.trim();
+      if (query) {
+        performSearch(query);
+        searchResults.style.display = 'none';
+      }
+    }
+
+    // Send message function
+    async function sendMessage() {
+      const question = userInput.value.trim();
+      if (!question) return;
+
+      appendMessage(question, 'user');
+      userInput.value = '';
+      userInput.disabled = true;
+      sendBtn.disabled = true;
+
+      showTypingIndicator();
+
+      try {
+        const response = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+
+        removeTypingIndicator();
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          appendMessage(`Error: Server responded with status ${response.status}`, 'bot');
+          console.error('Server error:', errorText);
+          return;
+        }
+
+        const data = await response.json();
+        appendMessage(data.response || 'Sorry, no response.', 'bot');
+      } catch (error) {
+        removeTypingIndicator();
+        appendMessage('Error: Network or server issue.', 'bot');
+        console.error('Fetch error:', error);
+      } finally {
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        userInput.focus();
+      }
+    }
+
+    // File upload functions
+    function updateFileLabel(input) {
+      const fileLabel = document.getElementById('file-label');
+      const files = input.files;
+      if (files.length > 0) {
+        fileLabel.textContent = `${files.length} file(s) selected`;
+      } else {
+        fileLabel.textContent = 'No file chosen';
+      }
+    }
+
+    // Improved file upload handler
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const files = document.getElementById('document-files').files;
+      if (!files.length) {
+        appendMessage('❌ Please select at least one file to upload.', 'bot');
+        return;
+      }
+
+      const formData = new FormData();
+      for (let file of files) {
+        formData.append('documents', file);
+      }
+
+      const uploadSpinner = document.getElementById('upload-spinner');
+      const uploadBtn = document.getElementById('upload-btn');
+      const fileList = document.getElementById('uploaded-file-list');
+
+      // Show loading state
+      uploadSpinner.classList.remove('hidden');
+      uploadBtn.disabled = true;
+      uploadBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.response || 'Upload failed');
+        }
+
+        // Clear and update file list
+        fileList.innerHTML = '';
+        if (result.files && result.files.length > 0) {
+          result.files.forEach(file => {
+            const li = document.createElement('li');
+            li.textContent = file;
+            fileList.appendChild(li);
+          });
+        }
+
+        // Show success message in chat
+        appendMessage(`✅ ${result.response}`, 'bot');
+      } catch (err) {
+        console.error('Upload error:', err);
+        // Show error message in chat
+        appendMessage(`❌ Upload error: ${err.message}`, 'bot');
+      } finally {
+        // Reset UI state
+        uploadSpinner.classList.add('hidden');
+        uploadBtn.disabled = false;
+        uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    });
+
+    // Event listeners
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    searchBar.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        triggerSearch();
+      }
+    });
+  </script>
+</body>
+</html>

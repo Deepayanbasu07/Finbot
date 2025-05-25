@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinDoc Analyzer</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .footer-icon {
+      transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
+    }
+    .footer-icon:hover {
+      color: #f1f5f9;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="bg-[#0f172a] text-[#f1f5f9] min-h-screen flex flex-col">
+  <header class="flex justify-between items-center px-6 py-4 border-b border-[#1e293b]">
+    <div class="flex items-center space-x-3">
+      <svg class="w-6 h-6 text-[#10b981]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2ZM9.5 16.5L5 12l1.41-1.41L9.5 13.67l7.09-7.09L18 8l-8.5 8.5Z" /></svg>
+      <h1 class="text-2xl font-bold">FinDoc Analyzer</h1>
+    </div>
+  </header>
+
+  <main class="flex-1 px-6 py-8 max-w-5xl mx-auto w-full">
+    <div class="bg-[#1e293b] p-6 rounded-xl shadow-lg mb-10">
+      <h2 class="text-xl font-bold mb-4">Upload Conference Call Transcripts</h2>
+      <form id="upload-form" class="space-y-4">
+        <input id="file-input" type="file" multiple accept="application/pdf" class="w-full rounded bg-[#0f172a] p-2 text-[#f1f5f9]" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="start-date" class="block mb-1 font-semibold">Start Date:</label>
+            <input id="start-date" type="date" class="w-full rounded bg-[#0f172a] p-2 text-[#f1f5f9]" required />
+          </div>
+          <div>
+            <label for="end-date" class="block mb-1 font-semibold">End Date:</label>
+            <input id="end-date" type="date" class="w-full rounded bg-[#0f172a] p-2 text-[#f1f5f9]" required />
+          </div>
+        </div>
+        <button type="submit" class="mt-4 bg-[#10b981] hover:bg-[#0f9e5a] text-[#0f172a] font-bold py-2 px-6 rounded">
+          Analyze Sentiment
+        </button>
+        <div id="upload-status" class="text-sm text-[#94a3b8] mt-2"></div>
+      </form>
+    </div>
+
+    <h2 class="text-2xl font-bold mb-6">Analysis Results</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Sentiment Card -->
+      <div id="sentiment-card" class="bg-[#1e293b] p-6 rounded-xl shadow-lg">
+        <div class="flex items-center mb-4">
+          <span class="material-icons-outlined text-3xl text-[#10b981] mr-3">sentiment_satisfied</span>
+          <h3 class="text-lg font-semibold">Sentiment Analysis</h3>
+        </div>
+        <p class="text-sm text-[#94a3b8] mb-2">Overall sentiment from the transcripts.</p>
+        <div class="h-40 bg-[#0f172a] rounded-md p-4 overflow-auto card-content">
+          <p class="text-sm text-[#94a3b8] italic">Sentiment result will appear here</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="py-4 border-t border-[#1e293b] text-center">
+    <p class="text-sm text-[#94a3b8] mb-2">Built with ❤️ by Deepayan Basu | BTech @ IIT Jodhpur</p>
+    <div class="flex justify-center space-x-4">
+      <a href="mailto:deepayanbasu5@gmail.com" class="footer-icon text-[#94a3b8]" aria-label="Email"><i class="fas fa-envelope fa-lg"></i></a>
+      <a href="https://www.linkedin.com/in/deepayan-basu-06a5b123b/" target="_blank" rel="noopener noreferrer" class="footer-icon text-[#94a3b8]" aria-label="LinkedIn"><i class="fab fa-linkedin fa-lg"></i></a>
+      <a href="https://github.com/Deepayanbasu07" target="_blank" rel="noopener noreferrer" class="footer-icon text-[#94a3b8]" aria-label="GitHub"><i class="fab fa-github fa-lg"></i></a>
+    </div>
+  </footer>
+
+  <script>
+    const uploadForm = document.getElementById('upload-form');
+    const fileInput = document.getElementById('file-input');
+    const uploadStatus = document.getElementById('upload-status');
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      uploadStatus.textContent = "Uploading documents and analyzing...";
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+
+      if (!fileInput.files.length) {
+        uploadStatus.textContent = "Please upload at least one PDF.";
+        return;
+      }
+
+      if (!startDate || !endDate || startDate > endDate) {
+        uploadStatus.textContent = "Please enter a valid date range.";
+        return;
+      }
+
+      const formData = new FormData();
+      for (const file of fileInput.files) {
+        formData.append('files', file);
+      }
+      formData.append('startDate', startDate);
+      formData.append('endDate', endDate);
+
+      try {
+        const response = await fetch('/upload-and-analyze', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          uploadStatus.textContent = `Error: ${errorData.message || 'Analysis failed.'}`;
+          return;
+        }
+
+        const result = await response.json();
+        displayAnalysisResult(result);
+        uploadStatus.textContent = "Analysis complete.";
+      } catch (err) {
+        uploadStatus.textContent = `Error: ${err.message}`;
+      }
+    });
+
+    function displayAnalysisResult(data) {
+      const sentimentCard = document.querySelector('#sentiment-card .card-content');
+      if (sentimentCard && data.sentiment_summary) {
+        const summary = data.sentiment_summary;
+        sentimentCard.innerHTML = `
+          <p><strong>Vader Sentiment Scores:</strong></p>
+          <ul class="text-sm text-[#10b981] list-disc list-inside mb-2">
+            <li>Positive: ${summary.sentiment.pos}</li>
+            <li>Neutral: ${summary.sentiment.neu}</li>
+            <li>Negative: ${summary.sentiment.neg}</li>
+            <li>Compound: ${summary.sentiment.compound}</li>
+          </ul>
+          <p><strong>Afinn Adjusted Score:</strong> ${summary.afinn_adjusted.toFixed(2)}</p>
+          <p><strong>Word Count:</strong> ${summary.word_count}</p>
+          <p><strong>Revenue Growth %:</strong> ${summary.revenue_growth_percent !== null ? summary.revenue_growth_percent + '%' : 'N/A'}</p>
+          <p><strong>Period:</strong> ${summary.period_start} to ${summary.period_end}</p>
+        `;
+      }
+    }
+  </script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+</html>
